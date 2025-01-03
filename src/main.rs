@@ -19,7 +19,7 @@ fn main() {
     let width = 1200;
     let height = 800;
     println!("Hello world");
-    /* let mut world: World::new();
+    let mut world: World::new();
     world.register::<CameraComponent>();
     world.register::<PathTracerComponent>();
     world.register::<RenderDataComponent>();
@@ -32,7 +32,7 @@ fn main() {
 
     let path_tracer_entity = world.spawn(PathTracerComponent::new(width, height));
     let render_data_entity = world.spawn(RenderDataComponent::new(width, height));
-    */
+
     let renderer = Renderer::new(width, height);
     let mut window = WindowWrapper::new("Timo's Path Tracer", width, height);
 
@@ -42,15 +42,14 @@ fn main() {
         //tonemap_system(&mut world);
 
         // Fetch render data from ECS
-      //  let render_data = world
-         //   .query::<&RenderDataComponent>()
-          //  .iter()
-        //    .next()
-         //   .expect("RenderDataComponent missing")
-          //  .1;
+        let render_data = world
+            .query::<&RenderDataComponent>()
+            .iter()
+            .next()
+            .expect("RenderDataComponent missing")
+            .1;
 
         // Render the buffer
-        //renderer.render(&render_data.buffer, &mut window);
+        renderer.render(&render_data.buffer, &mut window);
     }
-    
 }
