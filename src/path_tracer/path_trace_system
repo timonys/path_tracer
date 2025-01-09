@@ -7,14 +7,12 @@ pub fn path_trace(world: &mut World) {
 
         for y in 0..height {
             for x in 0..width {
-                let pixel_idx = (y * width + x) * 3;
+                let pixel_idx = (y * width + x);
 
                 //TO-DO: implement path tracing logic
-                let color = [1.0, 0.0, 0.0];
+                let color = Vec3::new(1.0, 0.0, 0.0);
 
                 path_tracer.accumulated_colors[pixel_idx] += color;
-                path_tracer.accumulated_colors[pixel_idx + 1] += color;
-                path_tracer.accumulated_colors[pixel_idx + 2] += color;
             }
         }
     }

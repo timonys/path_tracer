@@ -13,3 +13,4 @@ impl Renderer {
         window.update_window(buffer);
     }
 }
+

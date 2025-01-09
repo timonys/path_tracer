@@ -1,20 +1,21 @@
+use flecs_ecs::prelude::Component;
 use glam::Vec3;
 
-#[derive(Debug)]
+#[derive(Debug, Component)]
 enum ShapeComponent {
     Sphere { center: Vec3, radius: f32 },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Component)]
 struct MaterialComponent {
-    diffuse_color: [f32; 3],
+    diffuse_color: Vec3,
 }
-#[derive(Debug)]
+#[derive(Debug, Component)]
 pub struct PathTracerComponent {
     pub width: usize,
     pub height: usize,
     pub samples_per_pixel: usize,
-    pub accumulated_colors: Vec<f32>, //Colors for each pixel (RGB)
+    pub accumulated_colors: Vec<Vec3>, //Colors for each pixel (RGB)
 }
 
 impl PathTracerComponent {
@@ -23,12 +24,12 @@ impl PathTracerComponent {
             width,
             height,
             samples_per_pixel: 1,
-            accumulated_colors: vec![0.0; width * height * 3],
+            accumulated_colors: vec![Vec3::new(0.0, 0.0, 0.0); width * height],
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Component)]
 pub struct RenderDataComponent {
     pub width: usize,
     pub height: usize,
@@ -45,9 +46,9 @@ impl RenderDataComponent {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Component)]
 pub struct CameraComponent {
-    pub position: [f32; 3],
-    pub direction: [f32; 3],
+    pub position: Vec3,
+    pub direction: Vec3,
     pub fov: f32,
 }
