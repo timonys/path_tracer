@@ -1,4 +1,5 @@
-use super::render_components::FramebufferComponent;
+use crate::path_tracer::path_trace_components::*;
+use crate::renderer::render_components::FramebufferComponent;
 use crate::renderer::render_system::*;
 use flecs_ecs::prelude::*;
 
@@ -19,10 +20,10 @@ impl Module for RenderModule {
         world.import::<RenderComponentModule>();
         world.module::<RenderModule>("renderer::systems");
 
-        world
-            .system_named::<&mut FramebufferComponent>("render_system")
-            .each(|framebuffer| {
-                render(framebuffer);
-            });
+        system!("render_to_framebuffer", world, &mut FramebufferComponent).each_entity(
+            |e, framebuffer| {
+                render(e, framebuffer);
+            },
+        );
     }
 }
