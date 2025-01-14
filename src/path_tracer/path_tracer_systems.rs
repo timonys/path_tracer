@@ -13,10 +13,20 @@ pub fn generate_rays(
 ) {
     for y in 0..path_tracer.height {
         for x in 0..path_tracer.width {
-            for _s in 0..path_tracer.sample_amount {
+            for sample_pass in 0..path_tracer.sample_amount {
                 let ray = create_ray(cam, x as f32, y as f32);
-                ray_buffer.rays.push(ray);
-                ray_buffer.indices.push((x, y));
+
+                ray_buffer
+                    .rays
+                    .entry(sample_pass)
+                    .or_default() // If no entry exists for this pass, create a new Vec
+                    .push(ray);
+
+                ray_buffer
+                    .indices
+                    .entry(sample_pass)
+                    .or_default() // If no entry exists for this pass, create a new Vec
+                    .push((x, y));
             }
         }
     }
@@ -24,29 +34,43 @@ pub fn generate_rays(
 
 pub fn trace_color(
     entity: EntityView,
-    path_tracer: &PathTracerComponent,
+    path_tracer: &mut PathTracerComponent,
     ray_buffer: &RayBufferComponent,
     sample_buffer: &mut AccumulatedSampleBufferComponent,
 ) {
-    for (i, ray) in ray_buffer.rays.iter().enumerate() {
-        let (x, y) = ray_buffer.indices[i];
-        let mut color = get_color(entity, ray, path_tracer.max_depth);
+    // Calculate how many passes have been done (for averaging over multiple passes)
+    let current_pass_count = path_tracer.current_pass + 1;
 
-        let sample_index = y as usize * sample_buffer.width + x as usize;
+    // Calculate the corresponding pixel indices (x, y)
+    let indices = &ray_buffer.indices[&path_tracer.current_pass];
+    let rays = &ray_buffer.rays[&path_tracer.current_pass];
+
+    for (x, indices) in indices.iter().enumerate() {
+        let mut color = get_color(entity, &rays[x], path_tracer.max_depth);
+        let (x, y) = indices;
+        let sample_index = *y as usize * sample_buffer.width + *x as usize;
         gamma_correct_color(&mut color);
 
-        // Accumulate the color for the pixel
-        sample_buffer.sample_data[sample_index] += color / path_tracer.sample_amount as f32;
+        // Accumulate the color for the pixel based on the current pass count
+        sample_buffer.sample_data[sample_index] =
+            (sample_buffer.sample_data[sample_index] * (current_pass_count as f32 - 1.0) + color)
+                / current_pass_count as f32;
     }
+
+    path_tracer.current_pass += 1;
 }
 
 pub fn create_ray(cam: &CameraComponent, u_coord: f32, v_coord: f32) -> Ray {
-    //pixel sample with random offset for anti aliasing
+    //ray with random offset for anti aliasing
     let sample_offset = rand_vec3();
     let pixel_sample = cam.pixel_upper_left_pos
         + ((u_coord + sample_offset.x) * cam.pixel_delta_u)
         + ((v_coord + sample_offset.y) * cam.pixel_delta_v);
     let ray_direction = pixel_sample - cam.pos;
+
+    if ray_direction.length() < f32::EPSILON {
+        return Ray::new(cam.pos, Vec3::ZERO);
+    }
 
     Ray::new(cam.pos, ray_direction.normalize())
 }
@@ -64,7 +88,11 @@ pub fn trace(entity: EntityView, ray: &Ray, ray_min: f32, ray_max: f32) -> Optio
                 .shape
                 .intersect(&transform.pos, ray, &mat.material, ray_min, ray_max)
         {
-            if closest_intersection.is_none() || hit.t < closest_intersection.as_ref().unwrap().t {
+            // Update closest intersection if this hit is closer or if no hit exists yet
+            if closest_intersection
+                .as_ref()
+                .map_or(true, |prev_hit| hit.t < prev_hit.t)
+            {
                 closest_intersection = Some(hit);
                 current_ray_max = closest_intersection.as_ref().unwrap().t;
             }

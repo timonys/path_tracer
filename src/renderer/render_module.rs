@@ -1,7 +1,7 @@
 use crate::path_tracer::path_trace_components::AccumulatedSampleBufferComponent;
 use crate::renderer::render_components::FramebufferComponent;
 use crate::renderer::render_system::render;
-use crate::WindowComponent;
+use crate::window::window_component::WindowComponent;
 use flecs_ecs::prelude::*;
 
 #[derive(Component)]

@@ -40,9 +40,12 @@ impl Module for PathTracerModule {
                 generate_rays( cam, path_tracer, ray_buffer);
             });
 
-            system!("trace_color", world, &mut RayBufferComponent, &mut AccumulatedSampleBufferComponent($), &PathTracerComponent($))
-            .kind::<flecs::pipeline::OnStart>()
+            system!("trace_color", world, &mut RayBufferComponent, &mut AccumulatedSampleBufferComponent($), &mut PathTracerComponent($))
+            .kind::<flecs::pipeline::OnUpdate>()
             .each_entity(|entity,(ray_buffer, sample_buffer, path_tracer)| {
+                if path_tracer.current_pass >= path_tracer.sample_amount {
+                    return; // Rendering complete
+                }
                 trace_color(entity, path_tracer, ray_buffer, sample_buffer);
             });
         });

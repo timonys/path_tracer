@@ -8,8 +8,8 @@ pub struct PathTracerConfig {
     pub width: usize,
     #[arg(short = 'y', long, default_value_t = 400)]
     pub height: usize,
-    #[arg(short = 's', long, default_value_t = 30)]
+    #[arg(short = 's', long, default_value_t = 150)]
     pub samples: i32,
-    #[arg(short = 'd', long, default_value_t = 10)]
+    #[arg(short = 'd', long, default_value_t = 100)]
     pub max_depth: i32,
 }

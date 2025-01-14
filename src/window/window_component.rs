@@ -8,6 +8,6 @@ pub struct WindowComponent {
 
 impl WindowComponent {
     pub fn new(window: Window) -> Self {
-        Self { handle: window }
+        WindowComponent { handle: window }
     }
 }

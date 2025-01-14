@@ -7,10 +7,9 @@ use crate::path_tracer::shapes::{Plane, Sphere, Triangle};
 use crate::renderer::render_module::RenderModule;
 use crate::window::window_component::WindowComponent;
 use crate::window::window_module::WindowModule;
+use clap::Parser;
 use flecs_ecs::prelude::*;
 use glam::Vec3;
-
-use clap::Parser;
 
 pub struct PathTracerApp {
     world: World,
@@ -29,6 +28,17 @@ impl PathTracerApp {
         let mut width: usize = 0;
         let mut height: usize = 0;
         self.world.get::<&PathTracerConfig>(|config| {
+            assert!(
+                config.width > 0,
+                "Width should be greater than 0, got: {}",
+                config.width
+            );
+            assert!(
+                config.height > 0,
+                "Height should be greater than 0, got: {}",
+                config.height
+            );
+
             width = config.width;
             height = config.height;
         });

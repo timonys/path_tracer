@@ -3,6 +3,7 @@ use crate::path_tracer::path_tracer_structs::Ray;
 use crate::path_tracer::shapes::*;
 use flecs_ecs::prelude::*;
 use glam::Vec3;
+use std::collections::HashMap;
 
 #[derive(Component)]
 pub struct PathTracerComponent {
@@ -10,15 +11,22 @@ pub struct PathTracerComponent {
     pub height: i32,
     pub max_depth: i32,
     pub sample_amount: i32,
+    pub current_pass: i32,
 }
 
 impl PathTracerComponent {
     pub fn new(width: i32, height: i32, max_depth: i32, sample_amount: i32) -> Self {
-        Self {
+        assert!(
+            width > 0 && height > 0,
+            "Width and height should be positive"
+        );
+
+        PathTracerComponent {
             width,
             height,
             max_depth,
             sample_amount,
+            current_pass: 0,
         }
     }
 }
@@ -39,6 +47,11 @@ impl CameraComponent {
         cam_height: f32,
         focal_length: f32,
     ) -> Self {
+        assert!(
+            viewport_width > 0 && viewport_height > 0,
+            "Viewport dimensions should be non-zero"
+        );
+
         let cam_width = cam_height * (viewport_width as f32 / viewport_height as f32);
 
         // Now you can safely calculate the vectors
@@ -52,7 +65,7 @@ impl CameraComponent {
             pos - Vec3::new(0.0, 0.0, focal_length) - viewport_u * 0.5 - viewport_v * 0.5;
         let pixel_upper_left_pos = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
-        Self {
+        CameraComponent {
             pos,
             pixel_delta_u,
             pixel_delta_v,
@@ -70,7 +83,12 @@ pub struct AccumulatedSampleBufferComponent {
 
 impl AccumulatedSampleBufferComponent {
     pub fn new(width: usize, height: usize) -> Self {
-        Self {
+        assert!(
+            width > 0 && height > 0,
+            "Width and height should be positive"
+        );
+        
+        AccumulatedSampleBufferComponent {
             width,
             height,
             sample_data: vec![Vec3::default(); width * height],
@@ -80,16 +98,16 @@ impl AccumulatedSampleBufferComponent {
 
 #[derive(Component)]
 pub struct RayBufferComponent {
-    pub rays: Vec<Ray>,
-    pub indices: Vec<(i32, i32)>,
+    pub rays: HashMap<i32, Vec<Ray>>,
+    pub indices: HashMap<i32, Vec<(i32, i32)>>,
 }
 
 impl RayBufferComponent {
     // Constructor to initialize the struct with default values
     pub fn new() -> Self {
         RayBufferComponent {
-            rays: Vec::new(),
-            indices: Vec::new(),
+            rays: HashMap::new(),
+            indices: HashMap::new(),
         }
     }
 }

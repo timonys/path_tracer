@@ -1,7 +1,7 @@
 use crate::config::PathTracerConfig;
+use crate::renderer::render_components::FramebufferComponent;
 pub use crate::window::window_component::WindowComponent;
 pub use crate::window::window_system::update_window;
-use crate::FramebufferComponent;
 use flecs_ecs::prelude::*;
 use minifb::{Window, WindowOptions};
 
@@ -29,13 +29,18 @@ impl Module for WindowModule {
             height = config.height;
         });
 
-        let minifb_window = Window::new(
+        let minifb_window = match Window::new(
             "Timo's Path Tracer",
             width,
             height,
             WindowOptions::default(),
-        )
-        .expect("Failed to build window");
+        ) {
+            Ok(window) => window,
+            Err(e) => {
+                eprintln!("Error: Failed to create window: {}", e);
+                return;
+            }
+        };
 
         world.set(WindowComponent::new(minifb_window));
 

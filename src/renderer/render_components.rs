@@ -9,7 +9,7 @@ pub struct FramebufferComponent {
 
 impl FramebufferComponent {
     pub fn new(width: usize, height: usize) -> Self {
-        Self {
+        FramebufferComponent {
             buffer: vec![0; width * height],
             width,
             height,

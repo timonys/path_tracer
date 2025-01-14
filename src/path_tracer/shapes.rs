@@ -19,6 +19,7 @@ pub struct Sphere {
 
 impl Sphere {
     pub fn new(radius: f32) -> Self {
+        assert!(radius > 0.0, "Radius should be positive!");
         Sphere { radius }
     }
 }
@@ -32,6 +33,8 @@ impl Shape for Sphere {
         ray_min: f32,
         ray_max: f32,
     ) -> Option<Hit> {
+        assert!(ray.dir.length() > 0.0, "Ray direction should not be zero!");
+
         let oc = *pos - ray.origin;
 
         let a = ray.dir.length_squared();
@@ -98,6 +101,8 @@ impl Shape for Triangle {
         ray_min: f32,
         ray_max: f32,
     ) -> Option<Hit> {
+        assert!(ray.dir.length() > 0.0, "Ray direction should not be zero!");
+
         let point1 = *pos + self.p1_offset_center;
         let point2 = *pos + self.p2_offset_center;
         let point3 = *pos + self.p3_offset_center;
@@ -177,6 +182,8 @@ impl Shape for Plane {
         ray_min: f32,
         ray_max: f32,
     ) -> Option<Hit> {
+        assert!(ray.dir.length() > 0.0, "Ray direction should not be zero!");
+
         let denom = ray.dir.dot(self.normal);
 
         // If the ray is parallel to the plane, there is no intersection

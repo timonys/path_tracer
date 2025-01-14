@@ -1,5 +1,5 @@
+use crate::renderer::render_components::FramebufferComponent;
 use crate::window::window_component::*;
-use crate::FramebufferComponent;
 
 pub fn update_window(window: &mut WindowComponent, framebuffer: &FramebufferComponent) {
     if !window.handle.is_open() || window.handle.is_key_down(minifb::Key::Escape) {

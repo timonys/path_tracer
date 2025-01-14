@@ -6,6 +6,25 @@ pub fn render(
     framebuffer: &mut FramebufferComponent,
     accumulated_sample_buffer: &AccumulatedSampleBufferComponent,
 ) {
+    // Ensure the sizes of the framebuffer and sample buffer match
+    if framebuffer.buffer.len() != (framebuffer.width * framebuffer.height) {
+        eprintln!(
+            "Error: Framebuffer buffer size dont match! Expected {} but got {}",
+            framebuffer.width * framebuffer.height,
+            framebuffer.buffer.len()
+        );
+        return;
+    }
+
+    if accumulated_sample_buffer.sample_data.len() != (framebuffer.width * framebuffer.height) {
+        eprintln!(
+            "Error: Sample buffer size dont match! Expected {} but got {}",
+            framebuffer.width * framebuffer.height,
+            accumulated_sample_buffer.sample_data.len()
+        );
+        return;
+    }
+
     for y in 0..framebuffer.height {
         for x in 0..framebuffer.width {
             let buffer_index = y * framebuffer.width + x;

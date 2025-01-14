@@ -16,7 +16,7 @@ pub struct Ray {
 
 impl Ray {
     pub fn new(origin: Vec3, dir: Vec3) -> Self {
-        Self { origin, dir }
+        Ray { origin, dir }
     }
     pub fn at(&self, intersection_point: f32) -> Vec3 {
         self.origin + intersection_point * self.dir
