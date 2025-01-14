@@ -1,20 +1,18 @@
-pub use crate::renderer::render_components::*;
-use crate::AccumulatedSampleBufferComponent;
-use flecs_ecs::prelude::*;
+use crate::path_tracer::path_trace_components::AccumulatedSampleBufferComponent;
+pub use crate::renderer::render_components::FramebufferComponent;
 use glam::Vec3;
 
-pub fn render(e: EntityView, framebuffer: &mut FramebufferComponent) {
-    let query = e.world().new_query::<(&AccumulatedSampleBufferComponent)>();
-
-    query.each(|buffer| {
-        for y in 0..framebuffer.height {
-            for x in 0..framebuffer.width {
-                let buffer_index = y * framebuffer.width + x;
-                framebuffer.buffer[buffer_index] =
-                    convert_to_pixel(buffer.sample_data[buffer_index]);
-            }
+pub fn render(
+    framebuffer: &mut FramebufferComponent,
+    accumulated_sample_buffer: &AccumulatedSampleBufferComponent,
+) {
+    for y in 0..framebuffer.height {
+        for x in 0..framebuffer.width {
+            let buffer_index = y * framebuffer.width + x;
+            framebuffer.buffer[buffer_index] =
+                convert_to_pixel(accumulated_sample_buffer.sample_data[buffer_index]);
         }
-    });
+    }
 }
 
 fn convert_to_pixel(color: Vec3) -> u32 {

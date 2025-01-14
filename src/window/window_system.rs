@@ -1,7 +1,7 @@
 use crate::window::window_component::*;
 use crate::FramebufferComponent;
 
-pub fn run_window(window: &mut WindowComponent, framebuffer: &FramebufferComponent) {
+pub fn update_window(window: &mut WindowComponent, framebuffer: &FramebufferComponent) {
     if !window.handle.is_open() || window.handle.is_key_down(minifb::Key::Escape) {
         std::process::exit(0);
     }

@@ -1,6 +1,7 @@
 use clap::Parser;
+use flecs_ecs::prelude::*;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Component, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct PathTracerConfig {
     #[arg(short = 'w', long, default_value_t = 600)]

@@ -1,84 +1,68 @@
+use crate::background::create_background_color;
+use crate::path_tracer::materials::*;
 use crate::path_tracer::path_trace_components::*;
 use crate::path_tracer::path_tracer_structs::*;
 use crate::utils::*;
-use crate::CameraComponent;
 use flecs_ecs::prelude::*;
 use glam::Vec3;
 
-pub fn path_trace(
-    entity: EntityView,
-    path_tracer: &mut PathTracerComponent,
-    sample_buffer: &mut AccumulatedSampleBufferComponent,
+pub fn generate_rays(
+    cam: &CameraComponent,
+    path_tracer: &PathTracerComponent,
+    ray_buffer: &mut RayBufferComponent,
 ) {
-    let camera_query = entity.world().new_query::<&CameraComponent>();
-    let width = sample_buffer.width;
-    let height = sample_buffer.height;
-
-    camera_query.each(|cam| {
-        for y in 0..height {
-            for x in 0..width {
-                let mut color = Vec3::ZERO;
-                for s in 0..path_tracer.sample_amount {
-                    let ray = create_ray(cam, x as f32, y as f32);
-
-                    //Trace sample
-                    color += get_color(entity, &ray, path_tracer.max_depth);
-                }
-
-                let sample_index = y * width + x;
-                let pixel_samples_scale = 1.0 / path_tracer.sample_amount as f32;
-                color *= pixel_samples_scale;
-                gamma_correct_color(&mut color);
-                sample_buffer.sample_data[sample_index] = color;
+    for y in 0..path_tracer.height {
+        for x in 0..path_tracer.width {
+            for _s in 0..path_tracer.sample_amount {
+                let ray = create_ray(cam, x as f32, y as f32);
+                ray_buffer.rays.push(ray);
+                ray_buffer.indices.push((x, y));
             }
         }
-    });
-    path_tracer.has_rendered = true;
+    }
+}
+
+pub fn trace_color(
+    entity: EntityView,
+    path_tracer: &PathTracerComponent,
+    ray_buffer: &RayBufferComponent,
+    sample_buffer: &mut AccumulatedSampleBufferComponent,
+) {
+    for (i, ray) in ray_buffer.rays.iter().enumerate() {
+        let (x, y) = ray_buffer.indices[i];
+        let mut color = get_color(entity, ray, path_tracer.max_depth);
+
+        let sample_index = y as usize * sample_buffer.width + x as usize;
+        gamma_correct_color(&mut color);
+
+        // Accumulate the color for the pixel
+        sample_buffer.sample_data[sample_index] += color / path_tracer.sample_amount as f32;
+    }
 }
 
 pub fn create_ray(cam: &CameraComponent, u_coord: f32, v_coord: f32) -> Ray {
-    let focal_length = 1.0;
-    let cam_height = 2.0;
-    let cam_width = cam_height * (cam.viewport_width as f32 / cam.viewport_height as f32);
-
-    // Calculate the vectors across the horizontal and down the vertical viewport edges.
-    let viewport_u = Vec3::new(cam_width, 0.0, 0.0);
-    let viewport_v = Vec3::new(0.0, -cam_height, 0.0);
-
-    // Calculate the horizontal and vertical delta vectors from pixel to pixel.
-    let pixel_delta_u = viewport_u / cam.viewport_width as f32;
-    let pixel_delta_v = viewport_v / cam.viewport_height as f32;
-
-    // Calculate the location of the upper left pixel.
-    let viewport_upper_left =
-        cam.pos - Vec3::new(0.0, 0.0, focal_length) - viewport_u * 0.5 - viewport_v * 0.5;
-    let pixel_upper_left_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
-
     //pixel sample with random offset for anti aliasing
     let sample_offset = rand_vec3();
-    let pixel_sample = pixel_upper_left_loc
-        + ((u_coord + sample_offset.x) * pixel_delta_u)
-        + ((v_coord + sample_offset.y) * pixel_delta_v);
+    let pixel_sample = cam.pixel_upper_left_pos
+        + ((u_coord + sample_offset.x) * cam.pixel_delta_u)
+        + ((v_coord + sample_offset.y) * cam.pixel_delta_v);
     let ray_direction = pixel_sample - cam.pos;
 
-    Ray {
-        origin: cam.pos,
-        dir: ray_direction,
-    }
+    Ray::new(cam.pos, ray_direction.normalize())
 }
 
 pub fn trace(entity: EntityView, ray: &Ray, ray_min: f32, ray_max: f32) -> Option<Hit> {
     let query = entity
         .world()
-        .new_query::<(&ShapeComponent, &MaterialComponent)>();
+        .new_query::<(&ShapeComponent, &MaterialComponent, &TransformComponent)>();
     let mut closest_intersection: Option<Hit> = None;
     let mut current_ray_max = ray_max;
 
-    query.each(|(shape_comp, mat_comp)| {
+    query.each(|(shape, mat, transform)| {
         if let Some(hit) =
-            shape_comp
+            shape
                 .shape
-                .intersect(ray, mat_comp.material.clone(), ray_min, ray_max)
+                .intersect(&transform.pos, ray, &mat.material, ray_min, ray_max)
         {
             if closest_intersection.is_none() || hit.t < closest_intersection.as_ref().unwrap().t {
                 closest_intersection = Some(hit);
@@ -116,8 +100,5 @@ pub fn get_color(entity: EntityView, ray: &Ray, depth: i32) -> Vec3 {
         return Vec3::ZERO;
     }
 
-    // Background color (sky color) if no hit or scattering is unsuccessful
-    let unit_direction = ray.dir.normalize();
-    let a = 0.5 * (unit_direction.y + 1.0); // Smooth transition between sky and ground
-    (1.0 - a) * Vec3::new(1.0, 1.0, 1.0) + a * Vec3::new(0.5, 0.7, 1.0)
+    create_background_color(ray)
 }

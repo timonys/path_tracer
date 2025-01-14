@@ -1,3 +1,4 @@
+use crate::config::PathTracerConfig;
 use crate::path_tracer::path_trace_components::*;
 use crate::path_tracer::path_tracer_systems::*;
 use flecs_ecs::prelude::*;
@@ -24,16 +25,26 @@ impl Module for PathTracerModule {
         world.import::<PathTracerComponentModule>();
         world.module::<PathTracerModule>("path_tracer::systems");
 
-        system!(
-            "path_trace",
-            world,
-            &mut PathTracerComponent,
-            &mut AccumulatedSampleBufferComponent
-        )
-        .each_entity(|entity, (path_tracer, sample_buffer)| {
-            if !path_tracer.has_rendered {
-                path_trace(entity, path_tracer, sample_buffer);
-            }
+        world.get::<&PathTracerConfig>(|config| {
+            world.set(AccumulatedSampleBufferComponent::new(
+                config.width,
+                config.height,
+            ));
+
+            world.set(PathTracerComponent::new(config.width as i32, config.height as i32,config.max_depth, config.samples));
+            world.set(RayBufferComponent::new());
+
+            system!("generate_rays", world, &mut CameraComponent, &mut RayBufferComponent($), &PathTracerComponent($))
+            .kind::<flecs::pipeline::OnStart>()
+            .each(|(cam, ray_buffer, path_tracer)| {
+                generate_rays( cam, path_tracer, ray_buffer);
+            });
+
+            system!("trace_color", world, &mut RayBufferComponent, &mut AccumulatedSampleBufferComponent($), &PathTracerComponent($))
+            .kind::<flecs::pipeline::OnStart>()
+            .each_entity(|entity,(ray_buffer, sample_buffer, path_tracer)| {
+                trace_color(entity, path_tracer, ray_buffer, sample_buffer);
+            });
         });
     }
 }

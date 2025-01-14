@@ -1,55 +1,38 @@
-use super::materials::Material;
+use super::materials::MaterialType;
 use crate::path_tracer::path_tracer_structs::*;
 use glam::Vec3;
-use std::sync::Arc;
 
 pub trait Shape {
     fn intersect(
         &self,
+        pos: &Vec3,
         ray: &Ray,
-        material: Arc<dyn Material>,
+        material: &MaterialType,
         ray_min: f32,
         ray_max: f32,
     ) -> Option<Hit>;
 }
 
 pub struct Sphere {
-    pub center: Vec3,
     pub radius: f32,
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f32) -> Self {
-        Sphere { center, radius }
+    pub fn new(radius: f32) -> Self {
+        Sphere { radius }
     }
-}
-
-pub struct Plane {
-    pub point: Vec3,
-    pub normal: Vec3,
-}
-
-impl Plane {
-    pub fn new(point: Vec3, normal: Vec3) -> Self {
-        Plane { point, normal }
-    }
-}
-
-pub struct Triangle {
-    pub p1: Vec3,
-    pub p2: Vec3,
-    pub p3: Vec3,
 }
 
 impl Shape for Sphere {
     fn intersect(
         &self,
+        pos: &Vec3,
         ray: &Ray,
-        material: Arc<dyn Material>,
+        material: &MaterialType,
         ray_min: f32,
         ray_max: f32,
     ) -> Option<Hit> {
-        let oc = self.center - ray.origin;
+        let oc = *pos - ray.origin;
 
         let a = ray.dir.length_squared();
         let b = oc.dot(ray.dir);
@@ -72,7 +55,7 @@ impl Shape for Sphere {
         }
 
         let intersection = ray.at(t);
-        let mut normal = (intersection - self.center) / self.radius;
+        let mut normal = (intersection - *pos) / self.radius;
 
         let front_facing = ray.dir.dot(normal) > 0.0;
         if front_facing {
@@ -84,22 +67,43 @@ impl Shape for Sphere {
             normal,
             t,
             front_facing,
-            material,
+            material: material.clone(),
         };
         Some(hit)
+    }
+}
+
+pub struct Triangle {
+    pub p1_offset_center: Vec3,
+    pub p2_offset_center: Vec3,
+    pub p3_offset_center: Vec3,
+}
+
+impl Triangle {
+    pub fn new(p1_offset_center: Vec3, p2_offset_center: Vec3, p3_offset_center: Vec3) -> Self {
+        Triangle {
+            p1_offset_center,
+            p2_offset_center,
+            p3_offset_center,
+        }
     }
 }
 
 impl Shape for Triangle {
     fn intersect(
         &self,
+        pos: &Vec3,
         ray: &Ray,
-        material: Arc<dyn Material>,
+        material: &MaterialType,
         ray_min: f32,
         ray_max: f32,
     ) -> Option<Hit> {
-        let edge1 = self.p2 - self.p1;
-        let edge2 = self.p3 - self.p1;
+        let point1 = *pos + self.p1_offset_center;
+        let point2 = *pos + self.p2_offset_center;
+        let point3 = *pos + self.p3_offset_center;
+
+        let edge1 = point2 - point1;
+        let edge2 = point3 - point1;
 
         // Calculate the cross product of ray direction and edge2
         let h = ray.dir.cross(edge2);
@@ -112,11 +116,11 @@ impl Shape for Triangle {
 
         // Calculate the inverse of a
         let f = 1.0 / a;
-        let s = ray.origin - self.p1;
+        let s = ray.origin - point1;
         let u = f * s.dot(h);
 
         // Check if intersection lies within the triangle
-        if u < 0.0 || u > 1.0 {
+        if !(0.0..=1.0).contains(&u) {
             return None;
         }
 
@@ -149,16 +153,27 @@ impl Shape for Triangle {
             normal,
             t, // Distance from ray origin
             front_facing,
-            material,
+            material: material.clone(),
         })
+    }
+}
+
+pub struct Plane {
+    pub normal: Vec3,
+}
+
+impl Plane {
+    pub fn new(normal: Vec3) -> Self {
+        Plane { normal }
     }
 }
 
 impl Shape for Plane {
     fn intersect(
         &self,
+        pos: &Vec3,
         ray: &Ray,
-        material: Arc<dyn Material>,
+        material: &MaterialType,
         ray_min: f32,
         ray_max: f32,
     ) -> Option<Hit> {
@@ -170,7 +185,7 @@ impl Shape for Plane {
         }
 
         // Calculate the intersection distance along the ray
-        let t = (self.point - ray.origin).dot(self.normal) / denom;
+        let t = (*pos - ray.origin).dot(self.normal) / denom;
 
         // If the intersection is behind the ray origin or outside of ray bounds, no hit
         if t < ray_min || t > ray_max {
@@ -192,7 +207,7 @@ impl Shape for Plane {
             normal,
             t, // Distance from ray origin
             front_facing,
-            material,
+            material: material.clone(),
         })
     }
 }

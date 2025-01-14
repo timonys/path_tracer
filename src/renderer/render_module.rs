@@ -1,6 +1,7 @@
-use crate::path_tracer::path_trace_components::*;
+use crate::path_tracer::path_trace_components::AccumulatedSampleBufferComponent;
 use crate::renderer::render_components::FramebufferComponent;
-use crate::renderer::render_system::*;
+use crate::renderer::render_system::render;
+use crate::WindowComponent;
 use flecs_ecs::prelude::*;
 
 #[derive(Component)]
@@ -20,10 +21,20 @@ impl Module for RenderModule {
         world.import::<RenderComponentModule>();
         world.module::<RenderModule>("renderer::systems");
 
-        system!("render_to_framebuffer", world, &mut FramebufferComponent).each_entity(
-            |e, framebuffer| {
-                render(e, framebuffer);
-            },
-        );
+        world.get::<&WindowComponent>(|window| {
+            let (width, height) = window.handle.get_size();
+            world.set(FramebufferComponent::new(width, height));
+        });
+
+        system!(
+            "render_to_framebuffer",
+            world,
+            &mut FramebufferComponent,
+            &AccumulatedSampleBufferComponent
+        )
+        .singleton()
+        .each(|(framebuffer, sample_buffer)| {
+            render(framebuffer, sample_buffer);
+        });
     }
 }
